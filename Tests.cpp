@@ -12,8 +12,8 @@ int cueCalls=0; std::wstring lastCue; DWORD cueFlags=0;
 int clickCalls=0; int lastClickSlot=-1;
 void StubClick(int slot) { ++clickCalls; lastClickSlot=slot; }
 BOOL WINAPI StubCue(LPCWSTR path,HMODULE,DWORD flags) { ++cueCalls; lastCue=path?path:L""; cueFlags=flags; return TRUE; }
-int calls=0; void* passed=nullptr; float passedDt=0; uintptr_t scoped=0;
-void __fastcall StubUpdate(void* context,float dt) { ++calls; passed=context; passedDt=dt; scoped=gOverrideContext; }
+int calls=0; void* passed=nullptr; float passedDt=0; uintptr_t scoped=0;unsigned scopedSlot=0;unsigned char scopedMask=0;
+void __fastcall StubUpdate(void* context,float dt) { ++calls; passed=context; passedDt=dt; scoped=gOverrideContext;scopedSlot=gOverrideSlot;scopedMask=gInputMask; }
 template<class T,size_t N> void Put(std::array<unsigned char,N>& bytes,size_t off,T value) { std::memcpy(bytes.data()+off,&value,sizeof(value)); }
 }
 extern "C" int RunSeatUiStub(uintptr_t,unsigned char*);
@@ -193,6 +193,11 @@ int main(int argc,char** argv) {
  Put(mirrors,0x1d8,uint64_t{3}); DetourUpdate(context.data(),0.016f); CHECK(calls==5 && scoped==0);
  Put(mirrors,0x1d8,uint64_t{9});
  CHECK(context==beforeContext && actor==beforeActor && mirrors==beforeMirrors && entries==beforeEntries);
+ selectedSlot=-1;controllerMirrorLease.Put(2,.8f,-.9f,GetTickCount64());DetourUpdate(context.data(),.016f);CHECK(calls==6 && scoped==reinterpret_cast<uintptr_t>(context.data()) && scopedSlot==2 && scopedMask==10 && gOverrideContext==0 && gInputMask==0);
+ int audioSlot=-1;unsigned char audioMask=0;CHECK(controllerMirrorLease.Get(GetTickCount64(),audioSlot,audioMask) && audioSlot==2 && ServoMovement(audioSlot,audioMask,true,true) && ServoChannelVolume(audioSlot)==0x40000000);
+ controllerMirrorLease.Put(0,0,0,GetTickCount64());CHECK(controllerMirrorLease.Get(GetTickCount64(),audioSlot,audioMask) && !ServoMovement(audioSlot,audioMask,true,true));
+ controllerMirrorLease.Put(-1,0,0,GetTickCount64());DetourUpdate(context.data(),.016f);CHECK(calls==7 && scoped==0);
+ int leaseSlot=-1;unsigned char leaseMask=0;controllerMirrorLease.Put(4,-.8f,.9f,100);CHECK(controllerMirrorLease.Get(150,leaseSlot,leaseMask) && leaseSlot==4 && leaseMask==5);CHECK(!controllerMirrorLease.Get(251,leaseSlot,leaseMask));controllerMirrorLease.Put(-1,0,0,100);CHECK(!controllerMirrorLease.Get(101,leaseSlot,leaseMask));
  ExitCenter(); CHECK(selectedSlot.load()==-1); CHECK(!HooksReady()); ToggleCenter(); CHECK(selectedSlot.load()==-1);
  std::cout<<"PASS: real assembly stubs select all mirror slots only for matching scoped context; flags preserved; side/default pass-through; one native call with unchanged arguments; override cleared; input override masks, toggle/switch and hold/release/overlap and cycle transitions, voice cue mapping and no-repeat/mute/asynchronous playback, persisted assigned/cleared bindings across reloads, servo movement/mute/cancel guards and WAV validation and left/center/right channel mapping, disallowed/large-dt/short-array guards; host metadata and rotations untouched by wrapper.\n";
 }

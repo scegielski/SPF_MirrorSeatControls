@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <algorithm>
 #include <bcrypt.h>
 #include <mmsystem.h>
 #include <filesystem>
@@ -97,6 +98,7 @@ std::atomic<unsigned char> inputMask{0};
 std::array<SPF_Hook_Handle*,5> inputHooks{};
 std::atomic<bool> movementAllowed{false};
 std::mutex updateMutex;
+#include "MirrorControllerBridge.hpp"
 void Log(SPF_LogLevel,const char*);
 bool SeatReady();
 void ClearSeatCalibration();
@@ -309,14 +311,15 @@ void DetourUpdate(void* context,float dt) {
   currentContext.store(reinterpret_cast<uintptr_t>(context)); ++contextCalls;
   MapContext(reinterpret_cast<uintptr_t>(context));
  }
- const int slot=selectedSlot.load();
+ int slot=selectedSlot.load();unsigned char directions=inputMask.load();
+ if(movementAllowed.load())controllerMirrorLease.Get(GetTickCount64(),slot,directions);
  bool enabled=CanOverride(reinterpret_cast<uintptr_t>(context),slot);
  if (enabled && std::isfinite(dt) && dt>=0 && dt<=0.1f)
-  { gOverrideSlot=static_cast<unsigned int>(slot); gInputMask=inputMask.load(); gOverrideContext=reinterpret_cast<uintptr_t>(context); }
+  { gOverrideSlot=static_cast<unsigned int>(slot); gInputMask=directions; gOverrideContext=reinterpret_cast<uintptr_t>(context); }
  else gOverrideContext=0;
  originalUpdate(context,dt); // Exactly one call; native getter, setter and camera refresh.
  gOverrideContext=0; gInputMask=0;
- if(slot>=6 && movementAllowed.load()) MoveNativeSeat(dt,inputMask.load(),slot);
+ if(slot>=6 && movementAllowed.load()) MoveNativeSeat(dt,directions,slot);
 }
 void DetourSetRotation(void* object, const float* angles) {
     int slot=-1; uint64_t generation=0;
@@ -504,8 +507,10 @@ void OnUpdate() {
     }
     inputMask.store(mask);
     servoEnabled=!core->config || !config || core->config->Cfg_GetBool(config,"settings.servo_sound",true);
-    servo.SetMirror(selectedSlot.load()>=6?4:selectedSlot.load());
-    servo.SetPlaying(ServoMovement(selectedSlot.load(),mask,servoEnabled,movementAllowed.load()));
+    int servoSlot=selectedSlot.load();unsigned char servoMask=mask;
+    if(movementAllowed.load())controllerMirrorLease.Get(GetTickCount64(),servoSlot,servoMask);
+    servo.SetMirror(servoSlot>=6?4:servoSlot);
+    servo.SetPlaying(ServoMovement(servoSlot,servoMask,servoEnabled,movementAllowed.load()));
     static bool reported=false;
     if (!reported && HooksReady()) {
         Log(SPF_LOG_INFO,"DIAG: all nine hooks installed and enabled. Mirror controls ready when driving."); reported=true;
@@ -543,6 +548,13 @@ void OnUnload() {
 }
 }
 extern "C" {
+SPF_PLUGIN_EXPORT int __cdecl SPF_SetControllerMirrorInput(int slot,float x,float y){
+ if(slot!=-1 && slot!=0 && slot!=2 && slot!=4 && slot!=6)return 2;
+ if(!std::isfinite(x)||!std::isfinite(y))return 2;
+ if(slot>=0 && (!movementAllowed.load() || !HooksReady()))return 1;
+ if(slot==6 && !SeatReady())return 3;
+ controllerMirrorLease.Put(slot,std::clamp(x,-1.f,1.f),std::clamp(y,-1.f,1.f),GetTickCount64());return 0;
+}
 SPF_PLUGIN_EXPORT bool SPF_GetManifestAPI(SPF_Manifest_API* api) {
     if (!api) return false;
     api->BuildManifest=BuildManifest; return true;
