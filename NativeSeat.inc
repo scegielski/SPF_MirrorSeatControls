@@ -5,7 +5,7 @@ SeatApplyFn originalSeatApply=nullptr;
 SPF_Hook_Handle* seatApplyHook=nullptr;
 SPF_Hook_Handle* seatUiHook=nullptr;
 constexpr char kSeatApplyPattern[]="48 89 5C 24 08 57 48 83 EC 70 48 8B F9 E8 4E E6 FF FF F3 0F 10 8F 78 03 00 00 F3 0F 5C 8F 9C 03 00 00 F3 0F 10 87 80 03 00 00";
-constexpr char kSeatUiPattern[]="48 8B 4F 10 BA A0 00 00 00 E8 8F 8E 23 FF 48 8B D8";
+constexpr char kSeatUiPattern[]="48 8B 4F 10 BA A0 00 00 00 E8 7F 7A 23 FF 48 8B D8";
 std::mutex seatMutex;
 std::array<unsigned char,0x400> seatTemplate{};
 uintptr_t seatVehicleSettings=0;
@@ -13,7 +13,7 @@ bool seatCalibrated=false;
 uintptr_t LiveSeatSettings() {
  uintptr_t global=0,service=0,actor=0,settings=0;
  const auto base=reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
- if(!Read(base+0x36b8d70,global) || !global || !Read(global+0x31b0,service) || !service ||
+ if(!Read(base+0x36bad90,global) || !global || !Read(global+0x31b0,service) || !service ||
     !Read(service+0x18,actor) || !actor || !Read(actor+0x1f8,settings)) return 0;
  return settings;
 }
@@ -57,7 +57,7 @@ bool RefreshSeatDefaults() {
  const auto base=reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
  uintptr_t global=0,manager=0,settings=0;
  std::array<unsigned char,0x400> fresh{};
- const bool valid=Read(base+0x36b8d70,global) && Read(base+0x36b8de0,manager) && ReadSeatDefaults(global,manager,fresh,settings);
+ const bool valid=Read(base+0x36bad90,global) && Read(base+0x36bae00,manager) && ReadSeatDefaults(global,manager,fresh,settings);
  bool first=false;
  { std::lock_guard lock(seatMutex);
    if(!valid) { seatCalibrated=false; seatVehicleSettings=0; return false; }
@@ -129,8 +129,8 @@ void MoveNativeSeat(float dt,unsigned char mask,int mode) {
 }
 void RegisterSeatHooks() {
  const auto base=reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
- if(core->hooks->Hook_FindPattern(kSeatApplyPattern)!=base+0x114e000 || core->hooks->Hook_FindPattern(kSeatUiPattern)!=base+0x114e0f3) { Log(SPF_LOG_WARN,"SEAT: native signatures mismatch; seat controls disabled."); return; }
- gSeatApplyReturn=reinterpret_cast<void*>(base+0x114e19a);
+ if(core->hooks->Hook_FindPattern(kSeatApplyPattern)!=base+0x114f3d0 || core->hooks->Hook_FindPattern(kSeatUiPattern)!=base+0x114f4c3) { Log(SPF_LOG_WARN,"SEAT: native signatures mismatch; seat controls disabled."); return; }
+ gSeatApplyReturn=reinterpret_cast<void*>(base+0x114f56a);
  seatUiHook=core->hooks->Hook_Register(kName,"SeatUiTail","Skip seat UI only during hotkey call",reinterpret_cast<void*>(SeatUiStub),&gSeatUiOriginal,kSeatUiPattern,true);
  seatApplyHook=core->hooks->Hook_Register(kName,"SeatApply","Capture native seat defaults and limits",reinterpret_cast<void*>(DetourSeatApply),reinterpret_cast<void**>(&originalSeatApply),kSeatApplyPattern,true);
  Log(SPF_LOG_INFO,"SEAT: hooks requested; native defaults initialize automatically when seat mode is selected.");

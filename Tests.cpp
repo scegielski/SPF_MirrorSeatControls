@@ -117,12 +117,12 @@ int main(int argc,char** argv) {
  ExitCenter(); CHECK(selectedSlot==-1 && cueCalls==beforeExit+1 && lastCue==L"off.wav" && lastClickSlot==-1);
  ExitCenter(); UpdateVoiceCue(-1); CHECK(cueCalls==beforeExit+1);
  CHECK(ResolveHeldSelection(-1,8,0)==6); CHECK(ResolveHeldSelection(6,0,8)==-1);
- const auto saved=nlohmann::json::parse(R"json({"keybinds":{"SPF_MirrorControls.Select":{"left":{"bindings":[]},"cycle":{"bindings":[{"key":"KEY_1","type":"keyboard"}]}}}})json");
+ const auto saved=nlohmann::json::parse(R"json({"keybinds":{"SPF_MirrorSeatControls.Select":{"left":{"bindings":[]},"cycle":{"bindings":[{"key":"KEY_1","type":"keyboard"}]}}}})json");
  CHECK(!DefaultBindingNeeded(saved,"Select","left"));
  CHECK(!DefaultBindingNeeded(saved,"Select","cycle"));
  CHECK(DefaultBindingNeeded(saved,"Select","right"));
  CHECK(DefaultBindingNeeded(nlohmann::json::object(),"Select","left"));
- const auto malformed=nlohmann::json::parse(R"json({"keybinds":{"SPF_MirrorControls.Select":{"left":{"bindings":null}}}})json");
+ const auto malformed=nlohmann::json::parse(R"json({"keybinds":{"SPF_MirrorSeatControls.Select":{"left":{"bindings":null}}}})json");
  CHECK(DefaultBindingNeeded(malformed,"Select","left"));
  const auto fixture=std::filesystem::temp_directory_path()/"spf-mirror-persistence-regression.json";
  { std::ofstream file(fixture); file<<saved.dump(); }
@@ -197,6 +197,7 @@ int main(int argc,char** argv) {
  int audioSlot=-1;unsigned char audioMask=0;CHECK(controllerMirrorLease.Get(GetTickCount64(),audioSlot,audioMask) && audioSlot==2 && ServoMovement(audioSlot,audioMask,true,true) && ServoChannelVolume(audioSlot)==0x40000000);
  controllerMirrorLease.Put(0,0,0,GetTickCount64());CHECK(controllerMirrorLease.Get(GetTickCount64(),audioSlot,audioMask) && !ServoMovement(audioSlot,audioMask,true,true));
  controllerMirrorLease.Put(-1,0,0,GetTickCount64());DetourUpdate(context.data(),.016f);CHECK(calls==7 && scoped==0);
+ int wheelSlot=-1;unsigned char wheelMask=0;controllerMirrorLease.Put(9,.8f,-.9f,100);CHECK(controllerMirrorLease.Get(101,wheelSlot,wheelMask) && wheelSlot==9 && wheelMask==10 && ServoMovement(wheelSlot,wheelMask,true,true));
  int leaseSlot=-1;unsigned char leaseMask=0;controllerMirrorLease.Put(4,-.8f,.9f,100);CHECK(controllerMirrorLease.Get(150,leaseSlot,leaseMask) && leaseSlot==4 && leaseMask==5);CHECK(!controllerMirrorLease.Get(251,leaseSlot,leaseMask));controllerMirrorLease.Put(-1,0,0,100);CHECK(!controllerMirrorLease.Get(101,leaseSlot,leaseMask));
  ExitCenter(); CHECK(selectedSlot.load()==-1); CHECK(!HooksReady()); ToggleCenter(); CHECK(selectedSlot.load()==-1);
  std::cout<<"PASS: real assembly stubs select all mirror slots only for matching scoped context; flags preserved; side/default pass-through; one native call with unchanged arguments; override cleared; input override masks, toggle/switch and hold/release/overlap and cycle transitions, voice cue mapping and no-repeat/mute/asynchronous playback, persisted assigned/cleared bindings across reloads, servo movement/mute/cancel guards and WAV validation and left/center/right channel mapping, disallowed/large-dt/short-array guards; host metadata and rotations untouched by wrapper.\n";

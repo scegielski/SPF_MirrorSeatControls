@@ -49,8 +49,8 @@ void CenterSelectStub();
 void CenterSlotStub();
 }
 namespace {
-constexpr char kName[] = "SPF_MirrorControls";
-constexpr char kExecutableHash[] = "5d3b4e343154de6b25dd366b6048c5bc5c452a4daa50bc38b33fd2e571d54257";
+constexpr char kName[] = "SPF_MirrorSeatControls";
+constexpr char kExecutableHash[] = "c60e8ee02cc97b3cc6ef8c6298bb5c3c23c4ffd330b8185b646fb1b608a3c7b4";
 using UpdateFn = void(__fastcall*)(void*, float);
 using SetRotationFn = void(__fastcall*)(void*, const float*);
 UpdateFn originalUpdate = nullptr;
@@ -319,7 +319,7 @@ void DetourUpdate(void* context,float dt) {
  else gOverrideContext=0;
  originalUpdate(context,dt); // Exactly one call; native getter, setter and camera refresh.
  gOverrideContext=0; gInputMask=0;
- if(slot>=6 && movementAllowed.load()) MoveNativeSeat(dt,directions,slot);
+ if(slot>=6 && movementAllowed.load()){if(slot==9){MoveNativeSeat(dt,directions,7);MoveNativeSeat(dt,directions,8);}else MoveNativeSeat(dt,directions,slot);}
 }
 void DetourSetRotation(void* object, const float* angles) {
     int slot=-1; uint64_t generation=0;
@@ -401,9 +401,9 @@ bool DefaultBindingNeeded(const nlohmann::json& saved,const char* group,const ch
 void BuildManifest(SPF_Manifest_Builder_Handle* h,const SPF_Manifest_Builder_API* api) {
     const auto saved=ReadSavedSettings(PluginFolder()/"config"/"settings.json");
     api->Info_SetName(h,kName);
-    api->Info_SetVersion(h,"0.3.0");
+    api->Info_SetVersion(h,"0.3.1");
     api->Info_SetMinFrameworkVersion(h,"1.2.5");
-    api->Info_SetAuthor(h,"SPF Adjustment Hotkeys");
+    api->Info_SetAuthor(h,"SPF Mirror Seat Controls");
     api->Info_SetDescriptionLiteral(h,"Live mirror, native VR seat and steering-wheel adjustment through SPF hotkeys.");
     api->Policy_SetAllowUserConfig(h,true);
     api->Policy_AddConfigurableSystem(h,"logging");
@@ -434,8 +434,8 @@ void OnActivated(const SPF_Core_API* api) {
       // Migrate obsolete exit actions out of existing configurations and UI ownership.
       for(const char* action:{"Select.menu","Select.escape"}) core->keybinds->Kbind_UnregisterActionMetadata(keys,action);
       if(core->config && config) {
-        core->config->Cfg_RemoveKey(config,"keybinds.SPF_MirrorControls.Select.menu");
-        core->config->Cfg_RemoveKey(config,"keybinds.SPF_MirrorControls.Select.escape");
+        core->config->Cfg_RemoveKey(config,"keybinds.SPF_MirrorSeatControls.Select.menu");
+        core->config->Cfg_RemoveKey(config,"keybinds.SPF_MirrorSeatControls.Select.escape");
       }
       // Declare bindable actions without assigning keys on a fresh installation.
       core->keybinds->Kbind_RegisterActionMetadata(keys,"Select.left","Select left mirror","Toggle or hold to adjust the left mirror.",nullptr,nullptr);
@@ -549,10 +549,10 @@ void OnUnload() {
 }
 extern "C" {
 SPF_PLUGIN_EXPORT int __cdecl SPF_SetControllerMirrorInput(int slot,float x,float y){
- if(slot!=-1 && slot!=0 && slot!=2 && slot!=4 && slot!=6)return 2;
+ if(slot!=-1 && slot!=0 && slot!=2 && slot!=4 && slot!=6 && slot!=9)return 2;
  if(!std::isfinite(x)||!std::isfinite(y))return 2;
  if(slot>=0 && (!movementAllowed.load() || !HooksReady()))return 1;
- if(slot==6 && !SeatReady())return 3;
+ if((slot==6 || slot==9) && !SeatReady())return 3;
  controllerMirrorLease.Put(slot,std::clamp(x,-1.f,1.f),std::clamp(y,-1.f,1.f),GetTickCount64());return 0;
 }
 SPF_PLUGIN_EXPORT bool SPF_GetManifestAPI(SPF_Manifest_API* api) {

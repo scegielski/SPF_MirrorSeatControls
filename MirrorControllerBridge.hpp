@@ -1,5 +1,5 @@
 #pragma once
-// Include in SPF_AdjustmentHotkeys/MirrorControls.cpp inside its anonymous namespace.
+// Include in SPF_MirrorSeatControls/MirrorControls.cpp inside its anonymous namespace.
 // A short lease prevents movement surviving tracking loss or plugin unloading.
 struct ControllerMirrorLease {
  std::mutex mutex;int slot=-1;unsigned char mask=0;uint64_t tick=0;

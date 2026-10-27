@@ -1,13 +1,13 @@
-# SPF Adjustment Hotkeys
+# SPF Mirror Seat Controls
 
-Live, non-modal adjustments for American Truck Simulator through SPF hotkeysâ€”
+Live, non-modal adjustments for American Truck Simulator through SPF hotkeys —
 adjust mirrors without opening menus, with cycling and audio feedback.
 
 The current Windows x64 plugin provides tap-to-toggle or held adjustment of left, center and
 right mirrors in American Truck Simulator. It also supports one-key cycling,
 spoken selection cues, and a quiet servo loop routed left/center/right in stereo.
 
-The current version is **0.2.7**, pinned to the inspected ATS **1.61.3.1s**
+The current version is **0.3.1**, pinned to the inspected ATS **1.61.3.1s**
 executable and **SPF 1.2.5**. The Road Trip Ford Mustang was tested in-game.
 Other vehicles and executable builds have not been verified. Slot 4 can represent
 a different mirror in other vehicles. Unknown executables register no hooks.
@@ -26,7 +26,7 @@ In SPF Settings, select this plugin and expand **General Settings**:
 - **Adjustment selection click** (on by default): one short click on selection or switching, including cycling.
   It follows left/center/right stereo routing and plays independently of speech. Exiting plays a distinct centered double click; voice cues say "Adjustment off".
 
-Toggle cycle goes left â†’ center â†’ right â†’ off. Held cycle advances each press and
+Toggle cycle goes left -> center -> right -> seat -> steering extension -> steering tilt -> off. Held cycle advances each press and
 releases to exit. Pause, focus loss and world unload exit adjustment.
 Servo audio is left-only for the left mirror, both channels for center, right-only
 for right. It is stereo routing rather than world-positioned VR audio. Windows
@@ -68,11 +68,11 @@ ctest --test-dir build -C Release --output-on-failure
 ```
 
 The installable DLL and audio files are staged under
-`build/package/SPF_MirrorControls`. Build steps do not modify the game installation.
+`build/package/SPF_MirrorSeatControls`. Build steps do not modify the game installation.
 
 ## Install
 
-Close ATS. Copy the staged `SPF_MirrorControls` folder into
+Close ATS. Copy the staged `SPF_MirrorSeatControls` folder into
 `bin/win_x64/plugins/spfPlugins/`. Preserve the installed `config` folder when
 updating, then enable the plugin in SPF's plugin manager. Keep the earlier
 `SPF_MirrorCenter` and `SPF_MirrorDiagnostics` plugins disabled: hook targets overlap.
@@ -129,3 +129,9 @@ No F4 calibration is required. Disable Seat Diagnostics before enabling
 Adjustment Hotkeys: their native apply hooks overlap.
 Live F4 logs verified the native extension field; hotkey steering movement
 still needs an in-game test, including saving and reloading the vehicle.
+
+## Renamed plugin identity
+
+The DLL, SPF registration and binding namespace are now `SPF_MirrorSeatControls` (version 0.3.1). This project continues the former SPF Adjustment Hotkeys / SPF_MirrorControls plugin. Its Git history is preserved.
+
+Close ATS before upgrading. Stage the new folder and run `python MigrateSettings.py --plugins-root "PATH_TO_spfPlugins"` before enabling the new plugin if you have an old config. The migration copies settings from SPF_MirrorControls or SPF_AdjustmentHotkeys only when the new settings file is absent, renames binding namespaces, and preserves intentionally empty bindings. It never overwrites an existing new config or deletes the old one. Disable the old plugin to avoid overlapping native hooks. Existing game installation is not changed by this repository rename/build.

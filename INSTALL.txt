@@ -1,4 +1,4 @@
-SPF Mirror Controls 0.2.7 -- stereo servo cues
+SPF Mirror Seat Controls 0.3.1 -- stereo servo cues
 
 Close ATS; replace the DLL and copy the sounds folder. Keep your config folder.
 Servo sound plays while adjustment directions are held and stops on release/exit.
@@ -12,7 +12,7 @@ sound. SPF exposes positioned FMOD events, but this WAV implementation does not
 use an authored FMOD bank or verified head-tracked listener. Stereo is the requested
 fallback. Spoken selection cues continue on their own Windows audio stream.
 
-SPF Settings > SPF_MirrorControls > General Settings > Mirror servo sound mutes it.
+SPF Settings > SPF_MirrorSeatControls > General Settings > Mirror servo sound mutes it.
 The servo stream's volume is 25 percent on each active channel. Windows stereo
 output is required to hear the separation; mono/downmixed output will combine it.
 
